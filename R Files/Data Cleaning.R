@@ -42,4 +42,3 @@ table(rental_dropped_na$rooms)
 
 
 
-## test for anita
