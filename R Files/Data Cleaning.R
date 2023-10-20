@@ -39,3 +39,7 @@ str(rental_dropped_na)
 summary(rental_dropped_na)
 
 table(rental_dropped_na$rooms)
+
+
+
+## test for anita
