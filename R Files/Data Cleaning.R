@@ -275,7 +275,7 @@ data %>%
 
 # Export ----------------------------------------------------------------------
 
-saveRDS(rental_data, file = "training_data_cleaned.rds")
+saveRDS(data, file = "Data/training_data_cleaned.rds")
 
 
 
