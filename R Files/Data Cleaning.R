@@ -2,7 +2,7 @@ rm(list = ls())
 library(tidyverse)
 
 #Import dataset
-# rental_data <- read_csv("Data/training_data.csv") # AL: with this import, it puts all values variable size_land to NA...
+# rental_data <- read_csv("Data/training_data.csv") # AL: with this import, it puts all values in variable size_land to NA...
 rental_data <- read.csv("Data/training_data.csv", header = TRUE, sep = ",") # AL: with this import, I get values in size_land
 
 
@@ -53,6 +53,9 @@ data <- data %>%
          -shower, # almost all NAs
          -toilets, # no useful information
          -year, # no useful information
+         
+         # Discussion needed if include or exclude: 
+         -year_built, # 32% NAs
   )
 
 
@@ -62,8 +65,8 @@ data <- data %>%
 mean_area <- mean(data$area, na.rm  = TRUE)
 data$area <- as.numeric(ifelse(is.na(data$area), mean_area, data$area))
 
-mean_year_built <- mean(data$year_built, na.rm  = TRUE)
-data$year_built <- as.numeric(ifelse(is.na(data$year_built), mean_year_built, data$year_built))
+# mean_year_built <- mean(data$year_built, na.rm  = TRUE)
+# data$year_built <- as.numeric(ifelse(is.na(data$year_built), mean_year_built, data$year_built))
 
 mean_wgh <- mean(data$wgh_avg_sonnenklasse_per_egid, na.rm  = TRUE)
 data$wgh_avg_sonnenklasse_per_egid <- as.numeric(ifelse(is.na(data$wgh_avg_sonnenklasse_per_egid), mean_wgh, data$wgh_avg_sonnenklasse_per_egid))
@@ -87,14 +90,24 @@ mean_avg_bauperiode <- mean(data$avg_bauperiode, na.rm  = TRUE)
 data$avg_bauperiode <- as.numeric(ifelse(is.na(data$avg_bauperiode), mean_avg_bauperiode, data$avg_bauperiode))
 
 rm(mean_Anteil_auslaend, mean_anteil_efh, mean_anz_geschosse, mean_area, 
-   mean_avg_age, mean_avg_bauperiode, mean_avg_size, mean_wgh, mean_year_built)
+   mean_avg_age, mean_avg_bauperiode, mean_avg_size, mean_wgh) 
+# mean_year_built
 
-# Not cleaned yet (question to teacher):                
-# dist_to_haltst
-# dist_to_lake
-# dist_to_main_stat
-# dist_to_school_1
-# rooms: insert mode-value or use text analysis?
+
+# Insert 110% of max-values for numerical values, which were outside the calculation range:
+max_dist_to_haltst <- max(data$dist_to_haltst, na.rm = TRUE) * 1.1
+data$dist_to_haltst <- as.numeric(ifelse(is.na(data$dist_to_haltst), max_dist_to_haltst, data$dist_to_haltst))
+
+max_dist_to_lake <- max(data$dist_to_lake, na.rm = TRUE) * 1.1
+data$dist_to_lake <- as.numeric(ifelse(is.na(data$dist_to_lake), max_dist_to_lake, data$dist_to_lake))
+
+max_dist_to_main_stat <- max(data$dist_to_main_stat, na.rm = TRUE) * 1.1
+data$dist_to_main_stat <- as.numeric(ifelse(is.na(data$dist_to_main_stat), max_dist_to_main_stat, data$dist_to_main_stat))
+
+max_dist_to_school_1 <- max(data$dist_to_school_1, na.rm = TRUE) * 1.1
+data$dist_to_school_1 <- as.numeric(ifelse(is.na(data$dist_to_school_1), max_dist_to_school_1, data$dist_to_school_1))
+
+rm(max_dist_to_haltst, max_dist_to_lake, max_dist_to_main_stat, max_dist_to_school_1)
 
 
 # Insert mode-value for categorical values:
@@ -107,7 +120,11 @@ mode <- function(x, na.rm = TRUE) {
 }
 mode_floors <- mode(data$floors)
 data$floors <- as.numeric(ifelse(is.na(data$floors), mode_floors, data$floors)) # numeric or factor?!
-rm(mode_floors)
+
+mode_rooms <- mode(data$rooms)
+data$rooms <- as.numeric(ifelse(is.na(data$rooms), mode_rooms, data$rooms))
+
+rm(mode_floors, mode_rooms)
 
 
 # Insert "No" = 0 for infrastructure:
@@ -134,8 +151,10 @@ data$water <- as.factor(ifelse(is.na(data$water), 0, 1))
 # Insert 0 when probably not existing:
 data$size_land <- ifelse(is.na(data$size_land), 0, data$size_land)
 
+
 # Check for NAs again:
-colSums(is.na(data))
+colSums(is.na(data)) # all NA's removed
+
 
 ## Assign correct data type in columns without NAs:
 data <- data %>% 
@@ -145,6 +164,7 @@ data <- data %>%
          home_type = as.factor(home_type), 
          msregion = as.factor(msregion), 
          newly_built = as.factor(newly_built))
+
 
 
 # 3. Investigate Anomalies in certain Variables ---------------------------
@@ -227,12 +247,8 @@ roomsNA_descr <- data %>%
   filter(is.na(rooms)) %>% 
   select(descr)
 prop.table(table(is.na(roomsNA_descr))) * 100 # 77% with content -> text analysis possible, but is it effective?!
-# Alternative for the moment: insert mode value, and round it to the nearest 0.5
-mode_rooms <- mode(data$rooms)
-data$rooms <- as.numeric(ifelse(is.na(data$rooms), mode_rooms, data$rooms))
-rm(mode_rooms)
+rm(roomsNA_descr)
 
-summary(data$rooms)
 
 # 4. Data Description ---------------------------------------------------------
 
@@ -254,6 +270,12 @@ data %>%
   mutate(count = n()) %>% 
   ggplot(aes(y = reorder(KTKZ, count))) + 
   geom_bar()
+
+
+
+# Export ----------------------------------------------------------------------
+
+saveRDS(rental_data, file = "training_data_cleaned.rds")
 
 
 
